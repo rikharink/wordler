@@ -1,8 +1,6 @@
-use color_eyre::eyre::Result;
-use std::{fs::File, io::{self, BufRead}, path::Path};
-use regex::Regex;
 use clap::Parser;
-
+use color_eyre::eyre::Result;
+use regex::Regex;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -14,12 +12,6 @@ struct Args {
     pattern: String,
 }
 
-fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where P: AsRef<Path>, {
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
-}
-
 fn main() -> Result<()> {
     color_eyre::install()?;
 
@@ -29,30 +21,27 @@ fn main() -> Result<()> {
     let exclude = args.exclude;
     let pattern = Regex::new(&args.pattern)?;
     let re = Regex::new(r"^[a-z]{5}$")?;
-    if let Ok(word_list) = read_lines("/usr/share/dict/dutch") {
-        word_list.for_each(|line| {
-            if let Ok(word) = line {
-                if !re.is_match(&word) || !pattern.is_match(&word) {
-                    return;
-                }
-                let include_chars = include.chars();
-                for c in include_chars {
-                    if !word.contains(c) {
-                        return;
-                    }
-                }
-    
-                let exclude_chars = exclude.chars();
-                for c in exclude_chars {
-                    if word.contains(c) {
-                        return;
-                    }
-                }
+    let word_list = include_str!("./dutch").lines();
 
-                println!("{}", word);
+    word_list.for_each(|word| {
+        if !re.is_match(word) || !pattern.is_match(word) {
+            return;
+        }
+        let include_chars = include.chars();
+        for c in include_chars {
+            if !word.contains(c) {
+                return;
             }
-        });
-    }
+        }
 
+        let exclude_chars = exclude.chars();
+        for c in exclude_chars {
+            if word.contains(c) {
+                return;
+            }
+        }
+
+        println!("{}", word);
+    });
     Ok(())
 }
